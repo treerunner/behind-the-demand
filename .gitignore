@@ -1,0 +1,16 @@
+node_modules
+.turbo
+.env
+.env.local
+.env*.local
+dist
+.next
+.svelte-kit
+build
+
+# Data files that shouldn't be committed
+data/boundaries/*.zip
+data/seeds/*.csv
+
+# OS
+.DS_Store
