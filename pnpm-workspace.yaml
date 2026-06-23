@@ -1,0 +1,7 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "scripts/*"
+
+patchedDependencies:
+  "@payloadcms/ui@3.85.1": "patches/@payloadcms__ui@3.85.1.patch"
