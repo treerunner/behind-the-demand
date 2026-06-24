@@ -38,13 +38,11 @@ export interface SearchHit {
   documentUrl: string
 }
 
-export async function searchFilings(query: string, startDate: string): Promise<SearchHit[]> {
+export async function searchFilings(query: string, startDate: string, formTypes = '8-K'): Promise<SearchHit[]> {
   // EDGAR's dateRange filter is unreliable — sort by date descending and filter client-side
-  // 8-K: press releases and material event disclosures (good for REITs like Equinix, DLR)
-  // 10-K: annual reports where hyperscalers describe data center expansion by region
   const params = new URLSearchParams({
     q: query,
-    forms: '8-K,10-K',
+    forms: formTypes,
     dateRange: 'custom',
     startdt: startDate,
     sort: 'file_date',
@@ -107,7 +105,14 @@ function decodeHtml(html: string): string {
     .trim()
 }
 
-export async function fetchDocumentText(url: string): Promise<string> {
+// Inline XBRL documents embed structured financial data with namespace tokens that survive
+// HTML tag stripping and turn the extracted text into garbage. Detect and skip them.
+function isInlineXbrl(html: string): boolean {
+  return html.includes('xmlns:ix=') || html.includes('xbrli:') || html.includes('xmlns:xbrli')
+}
+
+export async function fetchDocumentText(url: string): Promise<string | null> {
   const html = await fetchText(url)
+  if (isInlineXbrl(html)) return null  // caller should skip this document
   return decodeHtml(html)
 }

@@ -73,35 +73,49 @@ function buildQuery(state: string): string {
   return `"data center" "${state}"`
 }
 
+async function searchState(
+  state: string,
+  startDate: string,
+  formTypes: string,
+): Promise<SearchHit[]> {
+  const query = buildQuery(state)
+  console.log(`  [${formTypes}] Searching: ${query} since ${startDate}…`)
+  const hits = await searchFilings(query, startDate, formTypes)
+  const relevant = hits.filter(h => TARGET_CIKS.has(h.cik))
+  console.log(`    ${hits.length} total hits, ${relevant.length} from target companies`)
+  return relevant
+}
+
 export async function fetchEdgarLeads(): Promise<EdgarLead[]> {
   const startDate = getStartDate()
   const leads: EdgarLead[] = []
-  // Track processed accession numbers to avoid duplicate work across state queries
   const processed = new Set<string>()
 
   for (const state of WATERSHED_STATES) {
-    const query = buildQuery(state)
-    console.log(`  Searching EDGAR: ${query} since ${startDate}…`)
+    const allHits: SearchHit[] = []
 
-    let hits: SearchHit[]
+    // 8-K works for all states
     try {
-      hits = await searchFilings(query, startDate)
+      allHits.push(...await searchState(state, startDate, '8-K'))
     } catch (err) {
-      console.error(`    ✗ Search failed for ${state}: ${err}`)
-      continue
+      console.error(`    ✗ 8-K search failed for ${state}: ${err}`)
     }
 
-    // Filter to target companies only
-    const relevant = hits.filter(h => TARGET_CIKS.has(h.cik))
-    console.log(`    ${hits.length} total hits, ${relevant.length} from target companies`)
+    // 10-K only for Virginia — other states flood EDGAR even with narrowed queries
+    if (state === 'Virginia') {
+      try {
+        allHits.push(...await searchState(state, startDate, '10-K'))
+      } catch (err) {
+        console.error(`    ✗ 10-K search failed for ${state}: ${err}`)
+      }
+    }
 
-    for (const hit of relevant) {
+    for (const hit of allHits) {
       const dedupKey = `${hit.cik}:${hit.accessionNumber}`
-
       if (processed.has(dedupKey)) continue
       processed.add(dedupKey)
 
-      let text = ''
+      let text: string | null
       try {
         text = await fetchDocumentText(hit.documentUrl)
       } catch (err) {
@@ -109,8 +123,13 @@ export async function fetchEdgarLeads(): Promise<EdgarLead[]> {
         continue
       }
 
+      if (text === null) {
+        console.log(`    ⚠ Skipped inline XBRL document: ${hit.documentUrl}`)
+        continue
+      }
+
       const sentences = extractRelevantSentences(text, state)
-      if (sentences.length === 0) continue  // full-text matched but no clear data center sentence
+      if (sentences.length === 0) continue
 
       const company = companyByCik(hit.cik)
 
