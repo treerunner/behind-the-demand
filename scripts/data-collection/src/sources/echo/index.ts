@@ -74,26 +74,39 @@ async function run() {
         limit: 1,
       })
 
-      const facilityData = {
-        name: data.name,
-        status: data.status,
-        confidence: data.confidence,
-        location: data.location,
-        external_ids: data.external_ids,
-        ...(dataSourceId ? { data_sources: [dataSourceId] } : {}),
-      }
-
       if (existing.totalDocs > 0) {
+        const record = existing.docs[0]
+
+        // Never touch records a human has marked as excluded
+        if ((record as any).review_status === 'excluded') {
+          skipped++
+          continue
+        }
+
+        // On update, only refresh EPA-sourced fields — preserve human review decisions
         await payload.update({
           collection: 'facilities',
-          id: existing.docs[0].id,
-          data: facilityData,
+          id: record.id,
+          data: {
+            name: data.name,
+            location: data.location,
+            external_ids: data.external_ids,
+            ...(dataSourceId ? { data_sources: [dataSourceId] } : {}),
+          },
         })
         updated++
       } else {
         await payload.create({
           collection: 'facilities',
-          data: facilityData,
+          data: {
+            name: data.name,
+            status: data.status,
+            confidence: data.confidence,
+            review_status: 'pending',
+            location: data.location,
+            external_ids: data.external_ids,
+            ...(dataSourceId ? { data_sources: [dataSourceId] } : {}),
+          },
         })
         created++
       }

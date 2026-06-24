@@ -274,6 +274,21 @@ export const Facilities: CollectionConfig = {
       admin: { position: 'sidebar', description: 'Date this record was last reviewed for accuracy' },
     },
     {
+      name: 'review_status',
+      type: 'select',
+      required: true,
+      defaultValue: 'pending',
+      admin: {
+        position: 'sidebar',
+        description: 'Set to Excluded to prevent re-import on future scrapes.',
+      },
+      options: [
+        { label: 'Pending — not yet reviewed', value: 'pending' },
+        { label: 'Confirmed — verified as a data center', value: 'confirmed' },
+        { label: 'Excluded — not a data center; scraper will skip', value: 'excluded' },
+      ],
+    },
+    {
       name: 'confidence',
       type: 'select',
       admin: { position: 'sidebar' },
