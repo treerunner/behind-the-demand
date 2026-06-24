@@ -8,6 +8,15 @@ const isDryRun = process.argv.includes('--dry-run')
 async function run() {
   const payload = await getPayload({ config })
 
+  // Use ECHO_EMAIL from env, or fall back to the first admin user's email
+  if (!process.env.ECHO_EMAIL) {
+    const { docs } = await payload.find({ collection: 'users', limit: 1, sort: 'createdAt' })
+    if (docs[0]?.email) {
+      process.env.ECHO_EMAIL = docs[0].email
+      console.log(`ECHO_EMAIL not set — using admin email: ${docs[0].email}`)
+    }
+  }
+
   console.log(`EPA ECHO scraper — ${isDryRun ? 'DRY RUN' : 'LIVE'}`)
   console.log(`States: ${WATERSHED_STATES.join(', ')}\n`)
 
