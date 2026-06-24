@@ -234,6 +234,33 @@ export const Facilities: CollectionConfig = {
       ],
     },
 
+    // External source IDs — stable identifiers from upstream databases, used for idempotent upserts
+    {
+      name: 'external_ids',
+      type: 'group',
+      label: 'External IDs',
+      admin: { description: 'Stable identifiers from upstream data sources. Used by collection scripts to upsert without creating duplicates.' },
+      fields: [
+        {
+          name: 'echo_registry_id',
+          type: 'text',
+          index: true,
+          admin: { description: 'EPA ECHO / FRS Registry ID' },
+        },
+        {
+          name: 'pjm_queue_id',
+          type: 'text',
+          index: true,
+          admin: { description: 'PJM Interconnection Queue project ID' },
+        },
+        {
+          name: 'state_permit_id',
+          type: 'text',
+          admin: { description: 'State-level permit or facility ID (e.g. VA DEQ STARS #)' },
+        },
+      ],
+    },
+
     // Provenance
     {
       name: 'data_sources',

@@ -1,0 +1,49 @@
+name: EPA ECHO Scrape
+
+on:
+  schedule:
+    # First day of every month at 06:00 UTC
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (print without writing to database)'
+        type: boolean
+        default: false
+
+jobs:
+  scrape:
+    name: Scrape EPA ECHO
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.11.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Write .env for CMS
+        run: |
+          cat <<EOF > apps/cms/.env
+          DATABASE_URI=${{ secrets.DATABASE_URI }}
+          PAYLOAD_SECRET=${{ secrets.PAYLOAD_SECRET }}
+          NEXT_PUBLIC_SERVER_URL=https://cms.behindthedemand.org
+          EOF
+
+      - name: Run EPA ECHO scraper
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            pnpm --filter @btd/data-collection echo:dry
+          else
+            pnpm --filter @btd/data-collection echo
+          fi

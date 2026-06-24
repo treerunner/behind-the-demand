@@ -1,0 +1,17 @@
+{
+  "name": "@btd/data-collection",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "echo": "node --env-file=../../apps/cms/.env --import tsx src/sources/echo/index.ts",
+    "echo:dry": "node --env-file=../../apps/cms/.env --import tsx src/sources/echo/index.ts --dry-run"
+  },
+  "dependencies": {
+    "payload": "^3.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.3"
+  }
+}
