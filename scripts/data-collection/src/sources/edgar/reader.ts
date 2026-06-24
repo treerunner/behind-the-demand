@@ -62,6 +62,18 @@ const STATE_ABBR: Record<string, string> = {
   'New York': 'NY',
 }
 
+// States whose names are so common in SEC filings that EDGAR's full-text search
+// times out on a bare "data center" + state query. Narrow with an extra keyword.
+const BROAD_STATES = new Set(['Maryland', 'Pennsylvania', 'New York'])
+
+function buildQuery(state: string): string {
+  if (BROAD_STATES.has(state)) {
+    // Require an announcement/construction verb alongside the state name to reduce noise
+    return `"data center" "${state}" (announce OR campus OR construction OR megawatt OR MW)`
+  }
+  return `"data center" "${state}"`
+}
+
 export async function fetchEdgarLeads(): Promise<EdgarLead[]> {
   const startDate = getStartDate()
   const leads: EdgarLead[] = []
@@ -69,11 +81,12 @@ export async function fetchEdgarLeads(): Promise<EdgarLead[]> {
   const processed = new Set<string>()
 
   for (const state of WATERSHED_STATES) {
-    console.log(`  Searching EDGAR: "data center" + "${state}" since ${startDate}…`)
+    const query = buildQuery(state)
+    console.log(`  Searching EDGAR: ${JSON.stringify(query)} since ${startDate}…`)
 
     let hits: SearchHit[]
     try {
-      hits = await searchFilings(`"data center" "${state}"`, startDate)
+      hits = await searchFilings(query, startDate)
     } catch (err) {
       console.error(`    ✗ Search failed for ${state}: ${err}`)
       continue

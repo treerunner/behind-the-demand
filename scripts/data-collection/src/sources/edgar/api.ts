@@ -39,18 +39,34 @@ export interface SearchHit {
 }
 
 export async function searchFilings(query: string, startDate: string): Promise<SearchHit[]> {
+  // EDGAR's dateRange filter is unreliable — sort by date descending and filter client-side
   const params = new URLSearchParams({
     q: query,
     forms: '8-K',
     dateRange: 'custom',
     startdt: startDate,
+    sort: 'file_date',
+    order: 'desc',
   })
 
-  const data = await fetchJson(`${SEARCH_URL}?${params}`)
+  let data: any
+  try {
+    data = await fetchJson(`${SEARCH_URL}?${params}`)
+  } catch (err: any) {
+    // EDGAR returns 500 for very common state name queries (too many results)
+    // Re-throw so caller can handle gracefully
+    throw err
+  }
+
   const hits: any[] = data?.hits?.hits ?? []
 
   return hits
-    .filter((h: any) => h._source?.ciks?.length > 0)
+    .filter((h: any) => {
+      if (!h._source?.ciks?.length) return false
+      // Client-side date guard — EDGAR's startdt filter is not always applied
+      const fileDate: string = h._source.file_date ?? ''
+      return fileDate >= startDate
+    })
     .map((h: any) => {
       const src = h._source
       const cik = src.ciks[0] as string
@@ -70,8 +86,26 @@ export async function searchFilings(query: string, startDate: string): Promise<S
     })
 }
 
+// Decode common HTML entities and strip tags
+function decodeHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#160;/g, ' ')
+    .replace(/&#13;/g, '')
+    .replace(/&#10;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#8203;/g, '')   // zero-width space
+    .replace(/&#[0-9]+;/g, ' ')
+    .replace(/&[a-z]+;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export async function fetchDocumentText(url: string): Promise<string> {
   const html = await fetchText(url)
-  // Strip HTML tags and collapse whitespace
-  return html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+  return decodeHtml(html)
 }
