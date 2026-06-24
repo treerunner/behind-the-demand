@@ -1,4 +1,3 @@
-const SEARCH_URL = 'https://efts.sec.gov/LATEST/search-index'
 const DATA_URL = 'https://data.sec.gov'
 const ARCHIVES_URL = 'https://www.sec.gov/Archives/edgar/data'
 
@@ -29,61 +28,78 @@ async function fetchText(url: string): Promise<string> {
   return res.text()
 }
 
-export interface SearchHit {
+export interface FilingDoc {
   cik: string
-  companyName: string
-  accessionNumber: string  // with dashes, e.g. "0001101239-25-000123"
+  accessionNumber: string  // with dashes
   filingDate: string
-  documentFilename: string // the specific file that matched the search
+  form: string
   documentUrl: string
+  documentFilename: string
 }
 
-export async function searchFilings(query: string, startDate: string, formTypes = '8-K'): Promise<SearchHit[]> {
-  // EDGAR's dateRange filter is unreliable — sort by date descending and filter client-side
-  const params = new URLSearchParams({
-    q: query,
-    forms: formTypes,
-    dateRange: 'custom',
-    startdt: startDate,
-    sort: 'file_date',
-    order: 'desc',
-  })
+// Fetch all recent 8-K filings for a company from the submissions API.
+// This is more reliable than full-text search — no 500 errors, no result-set size limits.
+export async function getRecentFilings(
+  cik: string,
+  startDate: string,
+  forms: string[],
+): Promise<FilingDoc[]> {
+  const url = `${DATA_URL}/submissions/CIK${cik}.json`
+  const data = await fetchJson(url)
 
-  let data: any
-  try {
-    data = await fetchJson(`${SEARCH_URL}?${params}`)
-  } catch (err: any) {
-    // EDGAR returns 500 for very common state name queries (too many results)
-    // Re-throw so caller can handle gracefully
-    throw err
+  const recent = data?.filings?.recent ?? {}
+  const accessions: string[] = recent.accessionNumber ?? []
+  const dates: string[] = recent.filingDate ?? []
+  const formTypes: string[] = recent.form ?? []
+  const primaryDocs: string[] = recent.primaryDocument ?? []
+
+  const results: FilingDoc[] = []
+  const cikNum = cik.replace(/^0+/, '')
+
+  for (let i = 0; i < accessions.length; i++) {
+    if (!dates[i] || dates[i] < startDate) continue
+    if (!forms.includes(formTypes[i])) continue
+
+    const adsh = accessions[i]
+    const accNodashes = adsh.replace(/-/g, '')
+    const primaryDoc = primaryDocs[i] ?? ''
+
+    results.push({
+      cik,
+      accessionNumber: adsh,
+      filingDate: dates[i],
+      form: formTypes[i],
+      documentUrl: `${ARCHIVES_URL}/${cikNum}/${accNodashes}/${primaryDoc}`,
+      documentFilename: primaryDoc,
+    })
   }
 
-  const hits: any[] = data?.hits?.hits ?? []
+  return results
+}
 
-  return hits
-    .filter((h: any) => {
-      if (!h._source?.ciks?.length) return false
-      // Client-side date guard — EDGAR's startdt filter is not always applied
-      const fileDate: string = h._source.file_date ?? ''
-      return fileDate >= startDate
-    })
-    .map((h: any) => {
-      const src = h._source
-      const cik = src.ciks[0] as string
-      const adsh = src.adsh as string
-      const filename = (h._id as string).split(':')[1] ?? ''
-      const cikNum = cik.replace(/^0+/, '')
-      const accNodashes = adsh.replace(/-/g, '')
+// Fetch the filing index for an 8-K and return the ex99.1 document URL if present.
+// ex99.1 is the press release exhibit — the most likely place to find facility announcements.
+export async function getEx991Url(cik: string, accessionNumber: string): Promise<string | null> {
+  const cikNum = cik.replace(/^0+/, '')
+  const accNodashes = accessionNumber.replace(/-/g, '')
+  const indexUrl = `${DATA_URL}/submissions/CIK${cik}.json`
 
-      return {
-        cik,
-        companyName: (src.display_names?.[0] as string ?? '').split('  ')[0],
-        accessionNumber: adsh,
-        filingDate: src.file_date as string,
-        documentFilename: filename,
-        documentUrl: `${ARCHIVES_URL}/${cikNum}/${accNodashes}/${filename}`,
-      }
-    })
+  // Fetch the filing-level document index from EDGAR's filing index JSON
+  const idxUrl = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNodashes}/${accNodashes}-index.json`
+  let data: any
+  try {
+    data = await fetchJson(idxUrl)
+  } catch {
+    return null
+  }
+
+  const docs: any[] = data?.directory?.item ?? []
+  const ex991 = docs.find(
+    (d: any) => /ex.?99\.?1/i.test(d.name ?? '') || /ex.?99\.?1/i.test(d.type ?? '')
+  )
+  if (!ex991?.name) return null
+
+  return `${ARCHIVES_URL}/${cikNum}/${accNodashes}/${ex991.name}`
 }
 
 // Decode common HTML entities and strip tags
@@ -105,14 +121,6 @@ function decodeHtml(html: string): string {
     .trim()
 }
 
-// Skip Exhibit 21 (subsidiary lists), 31/32 (SOX certifications) — not content documents.
-// Keep ex99 (press releases) and the main filing document.
-// Filename patterns vary: ex21, xex21, ex21d1, ex-21 — match broadly on the exhibit number.
-export function isContentDocument(url: string): boolean {
-  const lower = url.toLowerCase()
-  return !['ex21', 'ex22', 'ex31', 'ex32'].some(s => lower.includes(s))
-}
-
 // Inline XBRL documents embed structured financial data with namespace tokens that survive
 // HTML tag stripping and turn the extracted text into garbage. Detect and skip them.
 function isInlineXbrl(html: string): boolean {
@@ -121,6 +129,6 @@ function isInlineXbrl(html: string): boolean {
 
 export async function fetchDocumentText(url: string): Promise<string | null> {
   const html = await fetchText(url)
-  if (isInlineXbrl(html)) return null  // caller should skip this document
+  if (isInlineXbrl(html)) return null
   return decodeHtml(html)
 }
