@@ -1,0 +1,77 @@
+name: EPA ICIS-Air Scrape
+
+on:
+  schedule:
+    # Every Monday at 07:00 UTC (ICIS-Air is updated weekly)
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (print without writing to database)'
+        type: boolean
+        default: false
+
+jobs:
+  scrape:
+    name: Scrape EPA ICIS-Air
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.11.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Write .env for CMS
+        run: |
+          cat <<EOF > apps/cms/.env
+          DATABASE_URI=${{ secrets.DATABASE_URI }}
+          PAYLOAD_SECRET=${{ secrets.PAYLOAD_SECRET }}
+          NEXT_PUBLIC_SERVER_URL=https://cms.behindthedemand.org
+          EOF
+
+      - name: Download ICIS-Air dataset (~64 MB, updated weekly by EPA)
+        run: |
+          curl -L --retry 3 --retry-delay 10 -o /tmp/icis_air.zip \
+            "https://echo.epa.gov/files/echodownloads/ICIS-AIR_downloads.zip"
+          mkdir -p /tmp/icis_air_data
+          unzip -d /tmp/icis_air_data /tmp/icis_air.zip
+          CSV=$(ls /tmp/icis_air_data/ICIS_AIR_FACILITIES.csv 2>/dev/null || ls /tmp/icis_air_data/*.csv | head -1)
+          echo "ICIS_AIR_CSV_PATH=$CSV" >> $GITHUB_ENV
+          echo "Extracted: $CSV"
+          wc -l "$CSV"
+
+      - name: Run ICIS-Air scraper
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            pnpm --filter @btd/data-collection icis-air:dry
+          else
+            pnpm --filter @btd/data-collection icis-air
+          fi
+
+      - name: Open issue on failure
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "ICIS-Air scrape failed: $(date -u '+%Y-%m-%d')" \
+            --label "bug,data-pipeline" \
+            --body "## Scrape failure
+
+          **Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          **Date:** $(date -u '+%Y-%m-%d %H:%M UTC')
+
+          The scheduled EPA ICIS-Air scrape failed. Check the run log above for the error.
+
+          cc @${{ github.repository_owner }}"

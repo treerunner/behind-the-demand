@@ -245,7 +245,13 @@ export const Facilities: CollectionConfig = {
           name: 'echo_registry_id',
           type: 'text',
           index: true,
-          admin: { description: 'EPA ECHO / FRS Registry ID' },
+          admin: { description: 'EPA FRS Registry ID (shared across ECHO Exporter, ICIS-Air, and other EPA programs)' },
+        },
+        {
+          name: 'icis_air_pgm_sys_id',
+          type: 'text',
+          index: true,
+          admin: { description: 'ICIS-Air Program System ID (PGM_SYS_ID) — air-specific facility identifier' },
         },
         {
           name: 'pjm_queue_id',
