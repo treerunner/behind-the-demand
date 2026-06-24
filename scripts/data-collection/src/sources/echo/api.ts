@@ -70,6 +70,12 @@ export async function searchFacilities(
   const res = await fetch(url)
 
   if (!res.ok) {
+    if (res.status === 429) {
+      throw new Error(
+        `ECHO API rate limit (429) for state ${state}. ` +
+          `Free tier: 300 req/hr, 1500/day. Set ECHO_API_KEY in .env for higher limits.`,
+      )
+    }
     throw new Error(`ECHO API HTTP ${res.status} for state ${state}, page ${page}`)
   }
 
