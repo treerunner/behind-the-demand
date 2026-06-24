@@ -107,8 +107,10 @@ function decodeHtml(html: string): string {
 
 // Skip Exhibit 21 (subsidiary lists), 31/32 (SOX certifications) — not content documents.
 // Keep ex99 (press releases) and the main filing document.
+// Filename patterns vary: ex21, xex21, ex21d1, ex-21 — match broadly on the exhibit number.
 export function isContentDocument(url: string): boolean {
-  return !/[_-]ex-?2[12]\.|[_-]ex-?3[12]\./i.test(url)
+  const lower = url.toLowerCase()
+  return !['ex21', 'ex22', 'ex31', 'ex32'].some(s => lower.includes(s))
 }
 
 // Inline XBRL documents embed structured financial data with namespace tokens that survive
