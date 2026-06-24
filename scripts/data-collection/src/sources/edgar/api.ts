@@ -40,9 +40,11 @@ export interface SearchHit {
 
 export async function searchFilings(query: string, startDate: string): Promise<SearchHit[]> {
   // EDGAR's dateRange filter is unreliable — sort by date descending and filter client-side
+  // 8-K: press releases and material event disclosures (good for REITs like Equinix, DLR)
+  // 10-K: annual reports where hyperscalers describe data center expansion by region
   const params = new URLSearchParams({
     q: query,
-    forms: '8-K',
+    forms: '8-K,10-K',
     dateRange: 'custom',
     startdt: startDate,
     sort: 'file_date',
