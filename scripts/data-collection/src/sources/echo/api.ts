@@ -1,11 +1,7 @@
 // EPA ECHO REST API — https://echodata.epa.gov/echo/
-// Rate limit without key: 300 req/hr, 1500/day
-// Optional: set ECHO_API_KEY (free, from api.epa.gov) to raise limits via api.epa.gov/echo/
-const BASE = process.env.ECHO_API_KEY
-  ? `https://api.epa.gov/echo`
-  : `https://echodata.epa.gov/echo`
-
-const API_KEY_PARAM = process.env.ECHO_API_KEY ? `&api_key=${process.env.ECHO_API_KEY}` : ''
+// Rate limit: 300 req/hr, 1500/day anonymous
+// Set ECHO_EMAIL to your registered email for direct public access (higher limits)
+const BASE = `https://echodata.epa.gov/echo`
 
 export const WATERSHED_STATES = ['VA', 'MD', 'PA', 'DE', 'WV', 'NY', 'DC'] as const
 
@@ -64,7 +60,7 @@ export async function searchFacilities(
     params.set('p_naics', NAICS)
   }
 
-  if (process.env.ECHO_API_KEY) params.set('api_key', process.env.ECHO_API_KEY)
+  if (process.env.ECHO_EMAIL) params.set('email', process.env.ECHO_EMAIL)
 
   const url = `${BASE}/air_rest_services.get_facilities?${params}`
   const res = await fetch(url)
@@ -73,7 +69,7 @@ export async function searchFacilities(
     if (res.status === 429) {
       throw new Error(
         `ECHO API rate limit (429) for state ${state}. ` +
-          `Free tier: 300 req/hr, 1500/day. Set ECHO_API_KEY in .env for higher limits.`,
+          `Set ECHO_EMAIL in .env to your registered EPA ECHO email for higher limits.`,
       )
     }
     throw new Error(`ECHO API HTTP ${res.status} for state ${state}, page ${page}`)
@@ -85,7 +81,7 @@ export async function searchFacilities(
   if (r.Error) {
     if (r.Error.ErrorMessage.includes('exceed') || r.Error.ErrorMessage.includes('throttle')) {
       throw new Error(
-        `ECHO rate limit exceeded. Set ECHO_API_KEY in .env to raise limits. Details: ${r.Error.ErrorMessage}`,
+        `ECHO rate limit exceeded. Set ECHO_EMAIL in .env to your registered address. Details: ${r.Error.ErrorMessage}`,
       )
     }
     throw new Error(`ECHO API error for ${state} p${page}: ${r.Error.ErrorMessage}`)
