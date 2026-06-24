@@ -1,4 +1,4 @@
-import type { EchoFacility } from './api.js'
+import type { EchoRow } from './reader.js'
 
 export interface FacilityUpsert {
   name: string
@@ -16,41 +16,51 @@ export interface FacilityUpsert {
   external_ids: {
     echo_registry_id: string
   }
-  notes_text: string // stored separately, used to build richText
+  notes_text: string
 }
 
-export function transformFacility(f: EchoFacility): FacilityUpsert {
-  const lat = parseFloat(f.Latitude83)
-  const lng = parseFloat(f.Longitude83)
+export function transformFacility(row: EchoRow): FacilityUpsert {
+  const lat = parseFloat(row.FAC_LAT)
+  const lng = parseFloat(row.FAC_LONG)
 
   const programs: string[] = []
-  if (f.AIRIDs) programs.push('CAA (Air)')
-  if (f.CWAIDs) programs.push('CWA (Water)')
-  if (f.RCRAIDs) programs.push('RCRA (Hazardous Waste)')
+  if (row.AFS_IDS) programs.push('CAA (Air)')
+  if (row.NPDES_IDS) programs.push('CWA (Water)')
+  if (row.RCRA_IDS) programs.push('RCRA (Hazardous Waste)')
+
+  const naics = [row.CAA_NAICS, row.CWA_NAICS, row.RCRA_NAICS].filter(Boolean).join(', ')
+  const sics = [row.CAA_SICS, row.CWA_SICS, row.RCRA_SIC_CODES].filter(Boolean).join(', ')
 
   return {
-    name: titleCase(f.FacilityName),
+    name: titleCase(row.FAC_NAME),
     status: 'unknown',
     confidence: 'low',
     location: {
-      address: f.LocationAddress ?? '',
-      city: f.City ?? '',
-      state: f.StateName ?? '',
-      zip: f.Zip ?? '',
+      address: row.FAC_STREET ?? '',
+      city: row.FAC_CITY ?? '',
+      state: row.FAC_STATE ?? '',
+      zip: row.FAC_ZIP ?? '',
       lat: isNaN(lat) ? null : lat,
       lng: isNaN(lng) ? null : lng,
       geocode_source: 'echo',
     },
     external_ids: {
-      echo_registry_id: f.RegistryId,
+      echo_registry_id: row.REGISTRY_ID,
     },
     notes_text: [
-      `Imported from EPA ECHO (FRS Registry ID: ${f.RegistryId}).`,
-      `NAICS: ${f.NAICSCodes || 'N/A'} | SIC: ${f.SICCodes || 'N/A'}`,
+      `Imported from EPA ECHO Exporter (FRS Registry ID: ${row.REGISTRY_ID}).`,
+      naics ? `NAICS: ${naics}` : '',
+      sics ? `SIC: ${sics}` : '',
       programs.length ? `Regulatory programs: ${programs.join(', ')}` : '',
-      f.TotalInspectionCount !== '0' ? `Inspections: ${f.TotalInspectionCount}` : '',
-      f.TotalEnforcementCount !== '0' ? `Enforcement actions: ${f.TotalEnforcementCount}` : '',
-      f.TotalPenaltyAmt !== '0.00' ? `Total penalties: $${f.TotalPenaltyAmt}` : '',
+      row.FAC_INSPECTION_COUNT && row.FAC_INSPECTION_COUNT !== '0'
+        ? `Inspections: ${row.FAC_INSPECTION_COUNT}`
+        : '',
+      row.FAC_FORMAL_ACTION_COUNT && row.FAC_FORMAL_ACTION_COUNT !== '0'
+        ? `Enforcement actions: ${row.FAC_FORMAL_ACTION_COUNT}`
+        : '',
+      row.FAC_TOTAL_PENALTIES && row.FAC_TOTAL_PENALTIES !== '0'
+        ? `Total penalties: $${row.FAC_TOTAL_PENALTIES}`
+        : '',
     ]
       .filter(Boolean)
       .join('\n'),
@@ -58,7 +68,7 @@ export function transformFacility(f: EchoFacility): FacilityUpsert {
 }
 
 function titleCase(str: string): string {
-  return str
+  return (str ?? '')
     .toLowerCase()
     .replace(/\b\w/g, c => c.toUpperCase())
 }

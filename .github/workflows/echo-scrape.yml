@@ -15,7 +15,7 @@ jobs:
   scrape:
     name: Scrape EPA ECHO
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -39,6 +39,17 @@ jobs:
           PAYLOAD_SECRET=${{ secrets.PAYLOAD_SECRET }}
           NEXT_PUBLIC_SERVER_URL=https://cms.behindthedemand.org
           EOF
+
+      - name: Download ECHO Exporter (~392 MB, updated weekly by EPA)
+        run: |
+          curl -L --retry 3 --retry-delay 10 -o /tmp/echo_exporter.zip \
+            "https://echo.epa.gov/files/echodownloads/echo_exporter.zip"
+          mkdir -p /tmp/echo_data
+          unzip -d /tmp/echo_data /tmp/echo_exporter.zip
+          CSV=$(ls /tmp/echo_data/*.csv | head -1)
+          echo "ECHO_CSV_PATH=$CSV" >> $GITHUB_ENV
+          echo "Extracted: $CSV"
+          wc -l "$CSV"
 
       - name: Run EPA ECHO scraper
         run: |

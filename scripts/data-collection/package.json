@@ -8,6 +8,7 @@
     "echo:dry": "node --env-file=../../apps/cms/.env --import tsx src/sources/echo/index.ts --dry-run"
   },
   "dependencies": {
+    "csv-parse": "^7.0.0",
     "payload": "^3.0.0"
   },
   "devDependencies": {
