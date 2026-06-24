@@ -81,7 +81,8 @@ export async function searchFacilities(
   if (r.Error) {
     if (r.Error.ErrorMessage.includes('exceed') || r.Error.ErrorMessage.includes('throttle')) {
       throw new Error(
-        `ECHO rate limit exceeded. Set ECHO_EMAIL in .env to your registered address. Details: ${r.Error.ErrorMessage}`,
+        `ECHO rate limit exceeded (${state} p${page}). ` +
+          `Register at https://echo.epa.gov and ensure ECHO_EMAIL matches your account.`,
       )
     }
     throw new Error(`ECHO API error for ${state} p${page}: ${r.Error.ErrorMessage}`)
