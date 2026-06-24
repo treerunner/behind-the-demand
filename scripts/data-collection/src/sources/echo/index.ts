@@ -40,7 +40,7 @@ async function run() {
   let skipped = 0
   const errors: string[] = []
 
-  let dataSourceId: string | undefined
+  let dataSourceId: number | string | undefined
 
   if (!isDryRun) {
     const ds = await payload.create({
@@ -53,7 +53,7 @@ async function run() {
         notes: `Chesapeake Bay data centers (FAC_CHESAPEAKE_BAY_FLG=Y, NAICS 518210 / SIC 7374)`,
       },
     })
-    dataSourceId = String(ds.id)
+    dataSourceId = ds.id
   }
 
   for (const raw of facilities) {

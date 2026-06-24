@@ -11,7 +11,7 @@ export interface FacilityUpsert {
     zip: string
     lat: number | null
     lng: number | null
-    geocode_source: 'echo'
+    geocode_source: 'geocoded'
   }
   external_ids: {
     echo_registry_id: string
@@ -42,7 +42,7 @@ export function transformFacility(row: EchoRow): FacilityUpsert {
       zip: row.FAC_ZIP ?? '',
       lat: isNaN(lat) ? null : lat,
       lng: isNaN(lng) ? null : lng,
-      geocode_source: 'echo',
+      geocode_source: 'geocoded',
     },
     external_ids: {
       echo_registry_id: row.REGISTRY_ID,
