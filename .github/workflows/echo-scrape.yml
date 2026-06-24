@@ -58,3 +58,20 @@ jobs:
           else
             pnpm --filter @btd/data-collection echo
           fi
+
+      - name: Open issue on failure
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "ECHO scrape failed: $(date -u '+%Y-%m-%d')" \
+            --label "bug,data-pipeline" \
+            --body "## Scrape failure
+
+          **Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          **Date:** $(date -u '+%Y-%m-%d %H:%M UTC')
+
+          The scheduled EPA ECHO scrape failed. Check the run log above for the error.
+
+          cc @${{ github.repository_owner }}"
