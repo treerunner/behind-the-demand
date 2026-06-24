@@ -1,4 +1,4 @@
-import { searchFilings, fetchDocumentText, type SearchHit } from './api.js'
+import { searchFilings, fetchDocumentText, isContentDocument, type SearchHit } from './api.js'
 import {
   TARGET_CIKS,
   companyByCik,
@@ -115,6 +115,11 @@ export async function fetchEdgarLeads(): Promise<EdgarLead[]> {
       if (processed.has(dedupKey)) continue
       processed.add(dedupKey)
 
+      if (!isContentDocument(hit.documentUrl)) {
+        console.log(`    ⚠ Skipped non-content exhibit: ${hit.documentFilename}`)
+        continue
+      }
+
       let text: string | null
       try {
         text = await fetchDocumentText(hit.documentUrl)
@@ -124,7 +129,7 @@ export async function fetchEdgarLeads(): Promise<EdgarLead[]> {
       }
 
       if (text === null) {
-        console.log(`    ⚠ Skipped inline XBRL document: ${hit.documentUrl}`)
+        console.log(`    ⚠ Skipped inline XBRL document: ${hit.documentFilename}`)
         continue
       }
 

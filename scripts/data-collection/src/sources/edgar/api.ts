@@ -105,6 +105,12 @@ function decodeHtml(html: string): string {
     .trim()
 }
 
+// Skip Exhibit 21 (subsidiary lists), 31/32 (SOX certifications) — not content documents.
+// Keep ex99 (press releases) and the main filing document.
+export function isContentDocument(url: string): boolean {
+  return !/[_-]ex-?2[12]\.|[_-]ex-?3[12]\./i.test(url)
+}
+
 // Inline XBRL documents embed structured financial data with namespace tokens that survive
 // HTML tag stripping and turn the extracted text into garbage. Detect and skip them.
 function isInlineXbrl(html: string): boolean {
