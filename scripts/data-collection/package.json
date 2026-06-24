@@ -7,7 +7,9 @@
     "echo": "node --env-file=../../apps/cms/.env --import tsx src/sources/echo/index.ts",
     "echo:dry": "node --env-file=../../apps/cms/.env --import tsx src/sources/echo/index.ts --dry-run",
     "icis-air": "node --env-file=../../apps/cms/.env --import tsx src/sources/icis-air/index.ts",
-    "icis-air:dry": "node --env-file=../../apps/cms/.env --import tsx src/sources/icis-air/index.ts --dry-run"
+    "icis-air:dry": "node --env-file=../../apps/cms/.env --import tsx src/sources/icis-air/index.ts --dry-run",
+    "edgar": "node --env-file=../../apps/cms/.env --import tsx src/sources/edgar/index.ts",
+    "edgar:dry": "node --env-file=../../apps/cms/.env --import tsx src/sources/edgar/index.ts --dry-run"
   },
   "dependencies": {
     "csv-parse": "^7.0.0",

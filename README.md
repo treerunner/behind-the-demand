@@ -70,13 +70,27 @@ pnpm --filter @btd/data-collection icis-air        # live
 
 ---
 
-### SEC EDGAR (`edgar`) — planned
+### SEC EDGAR (`edgar`)
 
-**Source:** [SEC EDGAR full-text search API](https://efts.sec.gov/LATEST/search-index) — free JSON API, no key required.
+**Source:** [SEC EDGAR full-text search API](https://efts.sec.gov/LATEST/search-index) — free JSON API, `User-Agent` header required.
 
-**What we will pull:** 8-K press releases and 10-K disclosures from major public data center operators (Amazon/AWS, Microsoft/Azure, Alphabet/Google, Equinix, Digital Realty, Iron Mountain) mentioning data center expansion in Chesapeake watershed states.
+**What we pull:** 8-K press releases from target public companies (Amazon, Microsoft, Alphabet/Google, Equinix, Digital Realty, Iron Mountain, Meta, Apple) that mention "data center" alongside a Chesapeake watershed state (Virginia, Maryland, Pennsylvania, Delaware, West Virginia, New York).
 
-**Why:** Public companies announce data center campuses in SEC filings — often in 8-K press releases — before construction permits are filed with state agencies. This gives the earliest available signal for hyperscaler expansions in Virginia, Maryland, Pennsylvania, and New York.
+**Why:** Public companies file 8-K press releases when they announce new data center campuses — often a year or more before construction permits are filed with state agencies. This provides the earliest available signal for hyperscaler expansions. Because SEC filings are unstructured text, extracted records carry `confidence: low` and need editorial review before publication.
+
+**Key fields captured:** Company name, filing date, matched state, extracted city (best-effort regex from press release text), 3-sentence excerpt from the filing, direct URL to the matching document.
+
+**Dedup key:** `external_ids.sec_edgar_id` — format `{CIK}:{accession_number}`, unique per filing.
+
+**Schedule:** Every Monday, 08:00 UTC. `EDGAR_LOOKBACK_MONTHS` controls how far back to search (default 12).
+
+**Run locally:**
+```bash
+pnpm --filter @btd/data-collection edgar:dry   # dry run
+pnpm --filter @btd/data-collection edgar        # live
+# Optionally scan further back:
+EDGAR_LOOKBACK_MONTHS=24 pnpm --filter @btd/data-collection edgar:dry
+```
 
 ---
 

@@ -254,6 +254,12 @@ export const Facilities: CollectionConfig = {
           admin: { description: 'ICIS-Air Program System ID (PGM_SYS_ID) — air-specific facility identifier' },
         },
         {
+          name: 'sec_edgar_id',
+          type: 'text',
+          index: true,
+          admin: { description: 'SEC EDGAR identifier — format: {CIK}:{accession_number} (e.g. 0001101239:0001101239-25-000123)' },
+        },
+        {
           name: 'pjm_queue_id',
           type: 'text',
           index: true,

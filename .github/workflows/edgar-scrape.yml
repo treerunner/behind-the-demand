@@ -1,0 +1,71 @@
+name: SEC EDGAR Scrape
+
+on:
+  schedule:
+    # Every Monday at 08:00 UTC (after ICIS-Air at 07:00)
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (print without writing to database)'
+        type: boolean
+        default: false
+      lookback_months:
+        description: 'How many months of filings to scan (default 12)'
+        type: string
+        default: '12'
+
+jobs:
+  scrape:
+    name: Scrape SEC EDGAR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.11.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Write .env for CMS
+        run: |
+          cat <<EOF > apps/cms/.env
+          DATABASE_URI=${{ secrets.DATABASE_URI }}
+          PAYLOAD_SECRET=${{ secrets.PAYLOAD_SECRET }}
+          NEXT_PUBLIC_SERVER_URL=https://cms.behindthedemand.org
+          EDGAR_LOOKBACK_MONTHS=${{ inputs.lookback_months || '12' }}
+          EOF
+
+      - name: Run SEC EDGAR scraper
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            pnpm --filter @btd/data-collection edgar:dry
+          else
+            pnpm --filter @btd/data-collection edgar
+          fi
+
+      - name: Open issue on failure
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "EDGAR scrape failed: $(date -u '+%Y-%m-%d')" \
+            --label "bug,data-pipeline" \
+            --body "## Scrape failure
+
+          **Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          **Date:** $(date -u '+%Y-%m-%d %H:%M UTC')
+
+          The scheduled SEC EDGAR scrape failed. Check the run log above for the error.
+
+          cc @${{ github.repository_owner }}"
