@@ -47,7 +47,7 @@ async function run() {
       collection: 'data-sources',
       data: {
         name: `EPA ECHO Exporter — ${new Date().toISOString().slice(0, 10)}`,
-        source_type: 'download',
+        source_type: 'public_record',
         url: 'https://echo.epa.gov/files/echodownloads/echo_exporter.zip',
         fetched_at: new Date().toISOString(),
         notes: `Chesapeake Bay data centers (FAC_CHESAPEAKE_BAY_FLG=Y, NAICS 518210 / SIC 7374)`,
