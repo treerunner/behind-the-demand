@@ -73,20 +73,19 @@ export async function fetchEdgarLeads(): Promise<EdgarLead[]> {
     }
 
     console.log(`    ${filings.length} 8-K filings since ${startDate}`)
+    if (filings.length === 0) continue
+
+    let ex991Found = 0, xbrlSkipped = 0, contentChecked = 0
 
     for (const filing of filings) {
       const dedupKey = `${filing.cik}:${filing.accessionNumber}`
       if (processed.has(dedupKey)) continue
       processed.add(dedupKey)
 
-      // Prefer ex99.1 (press release) over the primary 8-K document
-      let docUrl: string | null = null
-      try {
-        docUrl = await getEx991Url(filing.cik, filing.accessionNumber)
-      } catch {
-        // Fall back to primary document
-      }
-      docUrl ??= filing.documentUrl
+      // Prefer ex99.1 (press release) over the primary 8-K shell document
+      const ex991Url = await getEx991Url(filing.cik, filing.accessionNumber).catch(() => null)
+      const docUrl = ex991Url ?? filing.documentUrl
+      if (ex991Url) ex991Found++
 
       let text: string | null
       try {
@@ -96,7 +95,12 @@ export async function fetchEdgarLeads(): Promise<EdgarLead[]> {
         continue
       }
 
-      if (text === null) continue  // XBRL
+      if (text === null) {
+        xbrlSkipped++
+        continue
+      }
+
+      contentChecked++
 
       // Check if this filing mentions any watershed state alongside "data center"
       for (const state of WATERSHED_STATES) {
@@ -119,6 +123,8 @@ export async function fetchEdgarLeads(): Promise<EdgarLead[]> {
         break
       }
     }
+
+    console.log(`    ex99.1 found: ${ex991Found}/${filings.length} | XBRL skipped: ${xbrlSkipped} | content checked: ${contentChecked}`)
   }
 
   return leads

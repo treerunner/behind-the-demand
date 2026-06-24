@@ -77,29 +77,36 @@ export async function getRecentFilings(
   return results
 }
 
-// Fetch the filing index for an 8-K and return the ex99.1 document URL if present.
+// Fetch the filing index HTML for an 8-K and return the ex99.1 document URL if present.
 // ex99.1 is the press release exhibit — the most likely place to find facility announcements.
+// EDGAR only publishes filing indexes as HTML (not JSON), so we parse the table rows.
 export async function getEx991Url(cik: string, accessionNumber: string): Promise<string | null> {
   const cikNum = cik.replace(/^0+/, '')
   const accNodashes = accessionNumber.replace(/-/g, '')
-  const indexUrl = `${DATA_URL}/submissions/CIK${cik}.json`
+  const indexUrl = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNodashes}/${accNodashes}-index.htm`
 
-  // Fetch the filing-level document index from EDGAR's filing index JSON
-  const idxUrl = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNodashes}/${accNodashes}-index.json`
-  let data: any
+  let html: string
   try {
-    data = await fetchJson(idxUrl)
+    html = await fetchText(indexUrl)
   } catch {
     return null
   }
 
-  const docs: any[] = data?.directory?.item ?? []
-  const ex991 = docs.find(
-    (d: any) => /ex.?99\.?1/i.test(d.name ?? '') || /ex.?99\.?1/i.test(d.type ?? '')
-  )
-  if (!ex991?.name) return null
+  // The index table has columns: Seq | Description | Document | Type | Size
+  // We look for a row where Type column contains EX-99.1
+  // Pattern: href to the file appears before the EX-99.1 type column in the same row
+  const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi
+  let match: RegExpExecArray | null
+  while ((match = rowRegex.exec(html)) !== null) {
+    const row = match[1]
+    if (!/EX-99\.1/i.test(row)) continue
+    const hrefMatch = row.match(/href="([^"]+\.(htm|html|txt))"/i)
+    if (!hrefMatch) continue
+    const filename = hrefMatch[1].replace(/^.*\//, '')
+    return `${ARCHIVES_URL}/${cikNum}/${accNodashes}/${filename}`
+  }
 
-  return `${ARCHIVES_URL}/${cikNum}/${accNodashes}/${ex991.name}`
+  return null
 }
 
 // Decode common HTML entities and strip tags
