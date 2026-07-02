@@ -45,13 +45,15 @@ function extractCity(text: string, state: string): string | null {
 }
 
 function extractRelevantSentences(text: string, state: string): string[] {
+  const abbr = STATE_ABBR[state]
+  const locations = abbr ? (KNOWN_LOCATIONS[abbr] ?? []) : []
   const sentences = text.match(/[^.!?]{20,}[.!?]/g) ?? []
   const stateLower = state.toLowerCase()
   return sentences
     .filter(s => {
       const lower = s.toLowerCase()
-      return (lower.includes('data center') || lower.includes('datacenter')) &&
-             lower.includes(stateLower)
+      if (!(lower.includes('data center') || lower.includes('datacenter'))) return false
+      return lower.includes(stateLower) || locations.some(loc => lower.includes(loc.toLowerCase()))
     })
     .slice(0, 3)
 }

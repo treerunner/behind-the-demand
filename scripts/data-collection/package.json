@@ -9,7 +9,11 @@
     "icis-air": "node --env-file=../../apps/cms/.env --import tsx src/sources/icis-air/index.ts",
     "icis-air:dry": "node --env-file=../../apps/cms/.env --import tsx src/sources/icis-air/index.ts --dry-run",
     "edgar": "node --env-file=../../apps/cms/.env --import tsx src/sources/edgar/index.ts",
-    "edgar:dry": "node --env-file=../../apps/cms/.env --import tsx src/sources/edgar/index.ts --dry-run"
+    "edgar:dry": "node --env-file=../../apps/cms/.env --import tsx src/sources/edgar/index.ts --dry-run",
+    "fractracker": "node --env-file=../../apps/cms/.env --import tsx src/sources/fractracker/index.ts",
+    "fractracker:dry": "node --env-file=../../apps/cms/.env --import tsx src/sources/fractracker/index.ts --dry-run",
+    "watershed": "node --env-file=../../apps/cms/.env --import tsx src/sources/watershed/index.ts",
+    "watershed:dry": "node --env-file=../../apps/cms/.env --import tsx src/sources/watershed/index.ts --dry-run"
   },
   "dependencies": {
     "csv-parse": "^7.0.0",

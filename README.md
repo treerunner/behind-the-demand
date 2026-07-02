@@ -94,6 +94,35 @@ EDGAR_LOOKBACK_MONTHS=24 pnpm --filter @btd/data-collection edgar:dry
 
 ---
 
+### FracTracker Alliance (`fractracker`)
+
+**Source:** [FracTracker Alliance U.S. Data Centers Tracker](https://experience.arcgis.com/experience/5a4d072ad01449bba5698a80103fb909) — ArcGIS Online feature layer (`data_centers_v4_agol_all`), public REST API, no auth required.
+
+**What we pull:** All data center records in Chesapeake watershed states (VA, MD, PA, DE, NY, DC), plus West Virginia filtered to the eight eastern panhandle counties that drain to the Potomac (Berkeley, Jefferson, Morgan, Hampshire, Hardy, Mineral, Grant, Pendleton). Pennsylvania and New York records land with `watershed.verified = false` pending PostGIS boundary verification, since parts of those states drain to the Delaware or Atlantic rather than the Bay.
+
+**Why:** FracTracker (compiled largely from [Piedmont Environmental Council](https://www.pecva.org) data for Virginia) tracks ~600+ watershed-area facilities including hundreds of proposed projects that have never touched an EPA regulatory program and won't appear in ECHO or ICIS-Air for years. It also carries power capacity (MW), operator/tenant, cooling type, and square footage data that federal sources don't publish. This makes it the richest single source for proposed and under-construction facilities.
+
+**Dedup strategy (tiered):**
+1. `external_ids.fractracker_id` exact match — fastest path on re-runs
+2. Coordinate proximity ≤250m (Haversine) — matches against any existing facility with lat/lng
+3. Normalized name + city — strips legal suffixes, collapses punctuation, requires both to match
+
+**Fields augmented on existing records:** `location.lat/lng`, `location.county`, `capacity.power_capacity_mw`, `capacity.building_sqft`, `capacity.site_area_acres`, `capacity.cooling_type`. Only fills empty fields — never overwrites data set by another source or editor.
+
+**Key fields captured:** Facility name, address, lat/lon, status, operator, tenant, MW capacity (low/high), cooling type, building sqft, site acres, expected online date, FracTracker source citation.
+
+**Dedup key:** `external_ids.fractracker_id` (FracTracker's internal `facility_id`)
+
+**Schedule:** Every Monday, 09:00 UTC.
+
+**Run locally:**
+```bash
+pnpm --filter @btd/data-collection fractracker:dry   # dry run
+pnpm --filter @btd/data-collection fractracker        # live
+```
+
+---
+
 ### Virginia DEQ (`va-deq`) — planned
 
 **Source:** Virginia DEQ pending air permit applications.

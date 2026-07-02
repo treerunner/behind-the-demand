@@ -83,7 +83,7 @@ export async function getRecentFilings(
 export async function getEx991Url(cik: string, accessionNumber: string): Promise<string | null> {
   const cikNum = cik.replace(/^0+/, '')
   const accNodashes = accessionNumber.replace(/-/g, '')
-  const indexUrl = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNodashes}/${accNodashes}-index.htm`
+  const indexUrl = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNodashes}/${accessionNumber}-index.htm`
 
   let html: string
   try {

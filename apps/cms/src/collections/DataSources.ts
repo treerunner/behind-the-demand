@@ -28,6 +28,7 @@ export const DataSources: CollectionConfig = {
         { label: 'Press Release', value: 'press_release' },
         { label: 'Regulatory Filing', value: 'regulatory_filing' },
         { label: 'News Article', value: 'news' },
+        { label: 'NGO / Advocacy Database', value: 'ngo_database' },
         { label: 'Manual Entry', value: 'manual' },
       ],
     },
@@ -40,6 +41,16 @@ export const DataSources: CollectionConfig = {
       name: 'agency',
       type: 'text',
       admin: { description: 'e.g. Virginia DEQ, Maryland MDE, EPA ECHO' },
+    },
+    {
+      name: 'published_date',
+      type: 'date',
+      admin: { description: 'Date the source was originally published (press release, article, filing date, etc.)' },
+    },
+    {
+      name: 'fetched_at',
+      type: 'date',
+      admin: { date: { pickerAppearance: 'dayAndTime' }, description: 'Timestamp when this data was fetched by the scraper' },
     },
     {
       name: 'last_fetched',

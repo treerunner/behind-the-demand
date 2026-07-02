@@ -5,7 +5,7 @@ export const Facilities: CollectionConfig = {
   admin: {
     useAsTitle: 'name',
     group: 'Data Centers',
-    defaultColumns: ['name', 'status', 'state', 'power_capacity_mw', 'watershed_verified'],
+    defaultColumns: ['name', 'review_status', 'status', 'confidence', 'location_state', 'capacity_power_capacity_mw'],
     description: 'Proposed and existing data centers within or near the Chesapeake watershed.',
   },
   fields: [
@@ -260,6 +260,12 @@ export const Facilities: CollectionConfig = {
           admin: { description: 'SEC EDGAR identifier — format: {CIK}:{accession_number} (e.g. 0001101239:0001101239-25-000123)' },
         },
         {
+          name: 'fractracker_id',
+          type: 'text',
+          index: true,
+          admin: { description: 'FracTracker Alliance facility_id (from ArcGIS data_centers_v4_agol_all layer)' },
+        },
+        {
           name: 'pjm_queue_id',
           type: 'text',
           index: true,
@@ -309,6 +315,14 @@ export const Facilities: CollectionConfig = {
         { label: 'Medium — corroborated from multiple secondary sources', value: 'medium' },
         { label: 'Low — single secondary source or inference', value: 'low' },
       ],
+    },
+    {
+      name: 'scraper_notes',
+      type: 'textarea',
+      admin: {
+        description: 'Auto-populated by scrapers. Do not edit manually — use Notes below for editorial annotations.',
+        rows: 3,
+      },
     },
     {
       name: 'notes',
